@@ -63,6 +63,45 @@ def get_default_quality():
         return QUALITIES[index]
     return '320'
 
+def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_name=''):
+    """
+    获取播放 URL，支持多音乐源优先级回退
+
+    优先级顺序：kuwo > joox > netease
+
+    Args:
+        track_id: 歌曲 ID
+        quality: 音质（默认 320）
+        song_name: 歌曲名称（用于日志）
+        artist_name: 歌手名称（用于日志）
+
+    Returns:
+        tuple: (play_url, source) 或 (None, None) 如果所有源都失败
+    """
+    # 定义音乐源优先级
+    source_priority = ['kuwo', 'joox', 'netease']
+
+    log('Getting play URL with fallback: track_id=%s, quality=%s, song=%s, artist=%s' %
+        (track_id, quality, song_name, artist_name))
+
+    # 按优先级尝试每个音乐源
+    for source in source_priority:
+        log('Trying source: %s' % source)
+
+        # 尝试获取播放 URL
+        data = api_call('url', source=source, id=track_id, br=quality)
+
+        if data and 'url' in data and data['url']:
+            play_url = data['url']
+            log('Successfully got play URL from %s: %s' % (source, play_url[:80] + '...'))
+            return play_url, source
+
+        log('Failed to get play URL from %s' % source)
+
+    # 所有音乐源都失败
+    log('All sources failed for track_id=%s' % track_id, xbmc.LOGERROR)
+    return None, None
+
 # GD Music API Base URL
 BASE_URL = 'https://music-api.gdstudio.xyz/api.php'
 CACHE_DIR = xbmcvfs.translatePath('special://profile/addon_data/%s/cache/' % __addon_id__)
@@ -639,15 +678,14 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
         album_name = album.get('name', '')
         pic_id = album.get('picId', 0) or album.get('pic', 0)
 
-        # 获取播放 URL
-        play_data = api_call('url', source='netease', id=track_id, br=default_quality)
+        # 获取播放 URL（使用优先级机制：kuwo > joox > netease）
+        play_url, actual_source = get_play_url_with_fallback(track_id, default_quality, name, artist_names)
 
-        if not play_data or 'url' not in play_data:
-            log('Failed to get play URL for track_id=%s' % track_id, xbmc.LOGWARNING)
+        if not play_url:
+            log('Failed to get play URL for track_id=%s from all sources' % track_id, xbmc.LOGWARNING)
             continue
 
-        play_url = play_data['url']
-        log('Play URL obtained: %s' % play_url[:80] + '...')
+        log('Play URL obtained from %s: %s' % (actual_source, play_url[:80] + '...'))
 
         # 构建 ListItem
         li = xbmcgui.ListItem(label=name)
@@ -1010,9 +1048,9 @@ def search_music():
 
 def play_music(source, track_id, pic_id='', lyric_id='', name='', artist='', album=''):
     """Handle music playback
-    
+
     Args:
-        source: Music source
+        source: Music source (original source, but will use priority fallback)
         track_id: Track ID
         pic_id: Album picture ID (optional)
         lyric_id: Lyrics ID (optional)
@@ -1020,80 +1058,71 @@ def play_music(source, track_id, pic_id='', lyric_id='', name='', artist='', alb
         artist: Artist name (optional, passed from search)
         album: Album name (optional, passed from search)
     """
-    if not source or not track_id:
-        log('Invalid play parameters: source=%s, track_id=%s' % (source, track_id), xbmc.LOGERROR)
+    if not track_id:
+        log('Invalid play parameters: track_id=%s' % track_id, xbmc.LOGERROR)
         xbmcgui.Dialog().ok(__addon_name__, '播放失败：缺少必要参数')
         return
-    
-    log('Playing music: source=%s, track_id=%s' % (source, track_id))
+
+    log('Playing music: original_source=%s, track_id=%s' % (source, track_id))
     log('Song info: name=%s, artist=%s, album=%s' % (name, artist, album))
     log('Additional params: pic_id=%s, lyric_id=%s' % (pic_id, lyric_id))
 
     default_quality = get_default_quality()
     log('Using quality: %s' % default_quality)
-    
-    # Get play URL
-    data = api_call('url', source=source, id=track_id, br=default_quality)
-    
-    if data is None:
+
+    # Get play URL with priority fallback (kuwo > joox > netease)
+    play_url, actual_source = get_play_url_with_fallback(track_id, default_quality, name, artist)
+
+    if not play_url:
         xbmcgui.Dialog().ok(
-            __addon_name__, 
-            '获取播放链接失败\n\n可能原因：\n1. 音乐源暂时不可用\n2. 歌曲已下架\n3. 网络连接问题'
+            __addon_name__,
+            '获取播放链接失败\n\n已尝试以下音乐源：\n1. 酷我音乐 (kuwo)\n2. JOOX\n3. 网易云音乐 (netease)\n\n可能原因：\n- 歌曲已下架\n- 需要VIP权限\n- 网络连接问题'
         )
-        log('Failed to get play URL', xbmc.LOGERROR)
+        log('Failed to get play URL from all sources', xbmc.LOGERROR)
         return
-    
-    if 'url' not in data:
-        xbmcgui.Dialog().ok(
-            __addon_name__, 
-            '播放链接不可用\n\n该歌曲可能已下架或需要VIP权限'
-        )
-        log('No URL in API response: %s' % data, xbmc.LOGERROR)
-        return
-    
-    play_url = data['url']
-    log('Play URL obtained: %s' % play_url[:80] + '...')
-    
+
+    log('Using source: %s' % actual_source)
+
     # Create ListItem with proper settings
     li = xbmcgui.ListItem(path=play_url)
-    
+
     # Set music metadata using actual song info
     li.setInfo('music', {
         'title': name or 'Unknown',
         'artist': artist or 'Unknown',
         'album': album or 'Unknown'
     })
-    
+
     log('Music metadata set: title=%s, artist=%s, album=%s' % (name, artist, album))
-    
+
     # Set content type to music
     li.setContentLookup(False)
-    
+
     # Fetch and set album art if available
     if pic_id:
-        album_art_url = get_album_art_url(source, pic_id)
+        album_art_url = get_album_art_url(actual_source, pic_id)
         if album_art_url:
             li.setArt({'thumb': album_art_url, 'icon': album_art_url})
             log('Album art set: %s' % album_art_url[:50] + '...')
-    
+
     # Fetch and set fanart if available
     if pic_id:
-        fanart_url = get_album_art_url(source, pic_id, size='1080')
+        fanart_url = get_album_art_url(actual_source, pic_id, size='1080')
         if fanart_url:
             li.setArt({'fanart': fanart_url})
             log('Fanart set: %s' % fanart_url[:50] + '...')
-    
+
     # Mark as playable
     li.setProperty('IsPlayable', 'true')
-    
+
     log('Calling xbmcplugin.setResolvedUrl')
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, li)
     log('xbmcplugin.setResolvedUrl called successfully')
 
     # Cache lyrics in background
     if lyric_id:
-        log('Caching lyrics: lyric_id=%s' % lyric_id)
-        cache_lyrics(source, lyric_id)
+        log('Caching lyrics: lyric_id=%s, source=%s' % (lyric_id, actual_source))
+        cache_lyrics(actual_source, lyric_id)
 
 def ensure_cache_dir():
     """Ensure cache directory exists"""
