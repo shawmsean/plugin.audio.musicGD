@@ -335,6 +335,59 @@ def get_playlist_detail(playlist_id):
         log('Unexpected error getting playlist detail: %s' % str(e), xbmc.LOGERROR)
         return None
 
+
+def get_playlist_all_tracks(playlist_id, limit=None, offset=0):
+    """
+    获取歌单的所有歌曲
+
+    由于网易云接口限制，歌单详情只会提供 10 首歌，
+    通过调用此接口，传入对应的歌单 id，即可获得对应的所有歌曲
+
+    Args:
+        playlist_id: 歌单 ID
+        limit: 限制获取歌曲的数量，默认值为当前歌单的歌曲数量
+        offset: 偏移量，默认值为 0
+
+    Returns:
+        dict: 包含 songs 列表的数据，或 None 如果失败
+    """
+    log('Getting playlist all tracks: id=%s, limit=%s, offset=%d' % (playlist_id, limit, offset))
+
+    try:
+        url = 'https://apis.netstart.cn/music/playlist/track/all'
+        params = {
+            'id': playlist_id,
+            'offset': offset
+        }
+
+        # 如果指定了 limit，则添加到参数中
+        if limit is not None:
+            params['limit'] = limit
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        }
+
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+
+        if 'songs' in data:
+            songs = data['songs']
+            log('Playlist all tracks API success: %d songs' % len(songs))
+            return data
+        else:
+            log('Playlist all tracks API returned no songs', xbmc.LOGERROR)
+            return None
+
+    except requests.RequestException as e:
+        log('Error getting playlist all tracks: %s' % str(e), xbmc.LOGERROR)
+        return None
+    except Exception as e:
+        log('Unexpected error getting playlist all tracks: %s' % str(e), xbmc.LOGERROR)
+        return None
+
 # ==================== 歌单相关页面函数 ====================
 
 def show_playlist_tags():
@@ -453,7 +506,7 @@ def show_playlist_detail(playlist_id, cat='全部', offset=0):
     """
     log('Showing playlist detail: id=%s' % playlist_id)
 
-    # 获取歌单详情
+    # 获取歌单详情（用于获取歌单信息）
     detail_data = get_playlist_detail(playlist_id)
 
     if not detail_data:
@@ -463,7 +516,17 @@ def show_playlist_detail(playlist_id, cat='全部', offset=0):
         return
 
     playlist = detail_data.get('playlist', {})
-    tracks = playlist.get('tracks', [])
+
+    # 获取歌单的所有歌曲
+    all_tracks_data = get_playlist_all_tracks(playlist_id)
+
+    if not all_tracks_data:
+        dialog = xbmcgui.Dialog()
+        dialog.notification('错误', '获取歌单歌曲失败', xbmcgui.NOTIFICATION_ERROR, 2000, False)
+        log('Failed to get playlist all tracks', xbmc.LOGERROR)
+        return
+
+    tracks = all_tracks_data.get('songs', [])
 
     if not tracks:
         dialog = xbmcgui.Dialog()
@@ -476,7 +539,7 @@ def show_playlist_detail(playlist_id, cat='全部', offset=0):
     creator = playlist.get('creator', {}).get('nickname', '')
     description = playlist.get('description', '')
 
-    log('Playlist: %s, %d tracks' % (playlist_name, len(tracks)))
+    log('Playlist: %s, %d tracks (all loaded)' % (playlist_name, len(tracks)))
 
     # 显示歌曲列表
     for track in tracks:
@@ -538,17 +601,16 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
     """
     log('Playing playlist all: id=%s' % playlist_id)
 
-    # 获取歌单详情
-    detail_data = get_playlist_detail(playlist_id)
+    # 获取歌单的所有歌曲
+    all_tracks_data = get_playlist_all_tracks(playlist_id)
 
-    if not detail_data:
+    if not all_tracks_data:
         dialog = xbmcgui.Dialog()
-        dialog.notification('错误', '获取歌单详情失败', xbmcgui.NOTIFICATION_ERROR, 2000, False)
-        log('Failed to get playlist detail for play all', xbmc.LOGERROR)
+        dialog.notification('错误', '获取歌单歌曲失败', xbmcgui.NOTIFICATION_ERROR, 2000, False)
+        log('Failed to get playlist all tracks for play all', xbmc.LOGERROR)
         return
 
-    playlist = detail_data.get('playlist', {})
-    tracks = playlist.get('tracks', [])
+    tracks = all_tracks_data.get('songs', [])
 
     if not tracks:
         dialog = xbmcgui.Dialog()
@@ -559,6 +621,7 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
     # 获取默认音质
     default_quality = get_default_quality()
     log('Using quality: %s' % default_quality)
+    log('Total tracks to play: %d' % len(tracks))
 
     # 构建播放列表
     playlist_items = []
