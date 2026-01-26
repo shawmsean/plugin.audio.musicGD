@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <category label="30001">
+        <setting label="30002" type="labelenum" id="default_source" default="netease">
+            <value>netease</value>
+            <value>kuwo</value>
+            <value>joox</value>
+            <value>tencent</value>
+            <value>tidal</value>
+            <value>spotify</value>
+            <value>ytmusic</value>
+            <value>qobuz</value>
+            <value>deezer</value>
+            <value>migu</value>
+            <value>kugou</value>
+            <value>ximalaya</value>
+            <value>apple</value>
+        </setting>
+        <setting label="30003" type="labelenum" id="default_quality" default="320">
+            <value>128</value>
+            <value>192</value>
+            <value>320</value>
+            <value>740</value>
+            <value>999</value>
+        </setting>
+        <setting label="30004" type="bool" id="cache_enabled" default="true"/>
+        <setting label="30005" type="number" id="cache_days" default="7"/>
+    </category>
+</settings>

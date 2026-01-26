@@ -1,0 +1,28 @@
+# Kodi Media Center language file
+# Addon Name: GD 音乐台
+# Addon id: plugin.audio.musicGD
+# Addon Provider: GD-Studio
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_GB\n"
+
+msgctxt "#30001"
+msgid "General"
+msgstr "General"
+
+msgctxt "#30002"
+msgid "Default Music Source"
+msgstr "Default Music Source"
+
+msgctxt "#30003"
+msgid "Default Quality"
+msgstr "Default Quality"
+
+msgctxt "#30004"
+msgid "Enable Caching"
+msgstr "Enable Caching"
+
+msgctxt "#30005"
+msgid "Cache Expiration (days)"
+msgstr "Cache Expiration (days)"
