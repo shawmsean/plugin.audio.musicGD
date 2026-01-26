@@ -516,6 +516,10 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
         log('No tracks found in playlist for play all: %s' % playlist_id)
         return
 
+    # 获取默认音质
+    default_quality = __addon__.getSetting('default_quality') or '320'
+    log('Using quality: %s' % default_quality)
+
     # 构建播放列表
     playlist_items = []
 
@@ -532,6 +536,16 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
         album_name = album.get('name', '')
         pic_id = album.get('picId', 0) or album.get('pic', 0)
 
+        # 获取播放 URL
+        play_data = api_call('url', source='netease', id=track_id, br=default_quality)
+
+        if not play_data or 'url' not in play_data:
+            log('Failed to get play URL for track_id=%s' % track_id, xbmc.LOGWARNING)
+            continue
+
+        play_url = play_data['url']
+        log('Play URL obtained: %s' % play_url[:80] + '...')
+
         # 构建 ListItem
         li = xbmcgui.ListItem(label=name)
         li.setInfo('music', {
@@ -544,17 +558,20 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
         if album.get('picUrl'):
             li.setArt({'icon': album['picUrl'], 'thumb': album['picUrl'], 'fanart': album['picUrl']})
 
+        # 设置播放路径
+        li.setPath(play_url)
+
         # 标记为可播放
         li.setProperty('IsPlayable', 'true')
 
-        # 添加到播放列表
-        playlist_items.append(li)
+        # 添加到播放列表（使用 URL 和 ListItem）
+        playlist_items.append((play_url, li))
 
     # 播放播放列表
     if playlist_items:
         xbmc.PlayList(xbmc.PLAYLIST_MUSIC).clear()
-        for item in playlist_items:
-            xbmc.PlayList(xbmc.PLAYLIST_MUSIC).add(item)
+        for play_url, li in playlist_items:
+            xbmc.PlayList(xbmc.PLAYLIST_MUSIC).add(play_url, li)
         xbmc.Player().play(xbmc.PlayList(xbmc.PLAYLIST_MUSIC), startpos=0)
         log('Playlist playback started: %d tracks' % len(playlist_items))
     else:
