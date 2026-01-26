@@ -1,90 +1,193 @@
-若使用本站提供的API，请注明出处“GD音乐台(music.gdstudio.xyz)”，尊重作者。使用过程如遇问题可B站私信：GD-Studio
+# plugin.audio.musicGD
 
-当前稳定音乐源（动态更新）：netease、kuwo、joox
+GD 音乐台 Kodi 音乐插件 - 基于 GD 音乐台 API 的音乐搜索、播放和歌单浏览插件。
 
-当前访问频率限制（动态更新）：5分钟内不超50次请求
+## 📋 功能特性
 
-更新日期：2025-12-3
+### 核心功能
+- ✅ **音乐搜索** - 支持多音乐源搜索（网易云音乐、酷我音乐等）
+- ✅ **歌曲播放** - 支持多种音质（128/192/320/无损）
+- ✅ **专辑封面** - 自动获取和显示专辑封面
+- ✅ **歌词显示** - 支持歌词缓存和显示
+- ✅ **歌单浏览** - 高质量歌单浏览和播放
+- ✅ **评论功能** - 查看歌曲评论，支持分页
+- ✅ **批量播放** - 支持播放歌单中的所有歌曲
 
+### 高级功能
+- ✅ **xbmcswift2 兼容** - 兼容 xbmcswift2 路由框架
+- ✅ **皮肤集成** - 支持 Arctic Fuse 3 皮肤
+- ✅ **交互式分页** - 交互式分页导航
+- ✅ **速率限制** - 智能速率限制和重试机制
+- ✅ **缓存机制** - 专辑封面和歌词缓存
+- ✅ **SSL/TLS 支持** - 安全的 HTTPS 连接
 
-搜索
-API：https://music-api.gdstudio.xyz/api.php?types=search&source=[MUSIC SOURCE]&name=[KEYWORD]&count=[PAGE LENGTH]&pages=[PAGE NUM]
+## 🚀 安装方法
 
-source：音乐源。可选项，参数值netease（默认）、tencent、tidal、spotify、ytmusic、qobuz、joox、deezer、migu、kugou、kuwo、ximalaya、apple。部分可能失效，建议使用稳定音乐源
+### 方法 1：从 Zip 文件安装
 
-* 高级用法：在音乐源后加上“_album”，如“netease_album”，可获取专辑中的曲目列表
+1. 下载最新版本的 zip 文件
+2. 在 Kodi 中打开"设置" → "插件" → "从 ZIP 文件安装"
+3. 选择下载的 zip 文件
+4. 等待安装完成
 
-name：关键字。必选项，关键字可以是曲目名、歌手名、专辑名
+### 方法 2：从源码安装
 
-count：页面长度。可选项，一次返回显示多少内容，默认为20条
+1. 克隆或下载此仓库
+2. 将 `plugin.audio.musicGD` 文件夹复制到 Kodi 的 addons 目录：
+   - Windows: `%APPDATA%\Kodi\addons\`
+   - Linux: `~/.kodi/addons/`
+   - macOS: `~/Library/Application Support/Kodi/addons/`
+3. 重启 Kodi
 
-pages：页码。可选项，返回搜索结果第几页，默认为第1页
+## 📖 使用指南
 
-返回：id（曲目ID，即track_id）、name（歌曲名）、artist（歌手列表）、album（专辑名）、pic_id（专辑图ID）、url_id（URL ID，废弃）、lyric_id（歌词ID）、source（音乐源）
+### 基本使用
 
+1. **搜索音乐**
+   - 打开插件，选择"搜索音乐"
+   - 输入歌曲名、歌手名或专辑名
+   - 浏览搜索结果
+   - 选择歌曲播放
 
-获取歌曲
-API：https://music-api.gdstudio.xyz/api.php?types=url&source=[MUSIC SOURCE]&id=[TRACK ID]&br=[128/192/320/740/999]
+2. **浏览歌单**
+   - 选择"歌单精选"
+   - 选择分类（华语、流行、摇滚等）
+   - 浏览高质量歌单
+   - 选择歌单查看歌曲列表
+   - 点击"播放全部"或选择单首歌曲
 
-source：音乐源。可选项，参数值netease（默认）、tencent、tidal、spotify、ytmusic、qobuz、joox、deezer、migu、kugou、kuwo、ximalaya、apple。部分可能失效，建议使用稳定音乐源
+3. **查看评论**
+   - 在 Arctic Fuse 3 皮肤中播放歌曲
+   - 在 MUSIC OSD 中点击"评论"按钮
+   - 使用交互式分页浏览评论
 
-id：曲目ID。必选项，即track_id，根据音乐源不同，曲目ID的获取方式各不相同，可通过本站提供的搜索接口获取
+### 高级功能
 
-br：音质。可选项，可选128、192、320、740、999（默认），其中740、999为无损音质
+- **音质设置** - 在插件设置中选择默认音质
+- **缓存管理** - 启用/禁用专辑封面和歌词缓存
+- **评论分页** - 使用交互式按钮浏览多页评论
 
-返回：url（音乐链接）、br（实际返回音质）、size（文件大小，单位为KB）
+## 🔧 技术细节
 
+### API 端点
 
-获取专辑图
-API：https://music-api.gdstudio.xyz/api.php?types=pic&source=[MUSIC SOURCE]&id=[PIC ID]&size=[300/500]
+| 功能 | API 端点 |
+|------|---------|
+| 搜索 | `https://music-api.gdstudio.xyz/api.php?types=search` |
+| 播放 URL | `https://music-api.gdstudio.xyz/api.php?types=url` |
+| 专辑封面 | `https://music-api.gdstudio.xyz/api.php?types=pic` |
+| 歌词 | `https://music-api.gdstudio.xyz/api.php?types=lyric` |
+| 歌单标签 | `https://apis.netstart.cn/music/playlist/highquality/tags` |
+| 高质量歌单 | `https://apis.netstart.cn/music/top/playlist/highquality` |
+| 歌单详情 | `https://apis.netstart.cn/music/playlist/detail` |
 
-source：音乐源。可选项，参数值netease（默认）、tencent、tidal、spotify、ytmusic、qobuz、joox、deezer、migu、kugou、kuwo、ximalaya、apple。部分可能失效，建议使用稳定音乐源
+### 支持的音乐源
 
-id：专辑图ID。必选项，专辑图ID即pic_id，可通过本站提供的搜索接口获取
+- ✅ netease（网易云音乐）- 推荐
+- ✅ kuwo（酷我音乐）
+- ✅ joox
+- ⚠️ 其他音乐源可能不稳定
 
-size：图片尺寸。可选项，可选300（默认）、500，其中300为小图，500为大图，返回的图片不一定是300px或500px
+### 技术栈
 
-返回：url（专辑图链接）
+- **语言**: Python 3
+- **框架**: Kodi Plugin
+- **网络**: requests
+- **加密**: ssl
 
+## 📝 配置说明
 
-获取歌词
-API：https://music-api.gdstudio.xyz/api.php?types=lyric&source=[MUSIC SOURCE]&id=[LYRIC ID]
+### 插件设置
 
-source：音乐源。可选项，参数值netease（默认）、tencent、tidal、spotify、ytmusic、qobuz、joox、deezer、migu、kugou、kuwo、ximalaya、apple。部分可能失效，建议使用稳定音乐源
+在 Kodi 插件设置中可以配置：
 
-id：歌词ID。必选项，歌词ID即lyric_id（一般与曲目ID相同），可通过本站提供的搜索接口获取
+- **默认音乐源** - 选择默认使用的音乐源
+- **默认音质** - 选择播放音质（128/192/320/无损）
+- **缓存启用** - 启用/禁用专辑封面和歌词缓存
 
-返回：lyric（LRC格式的原语种歌词）、tlyric（LRC格式的中文翻译歌词，不一定会返回）
+### 速率限制
 
+- **限制**: 5 分钟内不超过 50 次请求
+- **实现**: 全局请求队列 + 令牌桶限流
+- **重试**: 指数退避重试机制
 
-Kodi 21 开发的 GD 音乐台 插件设计文档摘要 — 目标是实现稳定的搜索、播放、专辑图与歌词功能，兼容 Kodi 21 插件框架，遵守 GD 音乐台署名要求并实现速率限流与离线缓存
-目标与范围
-目标用户：在 Kodi 21 上播放来自 GD 音乐台（GD音乐台(music.gdstudio.xyz)）的音乐内容。
+## 🐛 故障排除
 
-核心功能：搜索、获取播放 URL、获取专辑图、获取歌词；UI 浏览、播放队列、收藏与本地缓存。
+### 常见问题
 
-约束：必须在界面或文档中注明出处 GD音乐台(music.gdstudio.xyz)；遵守 5 分钟内不超 50 次请求 的速率限制（由 API 提供方动态更新）。
+**1. 搜索无结果**
+- 检查网络连接
+- 尝试不同的音乐源
+- 检查搜索关键字是否正确
 
-技术参考与兼容性
-Kodi 插件类型：基于 Python 的音频插件，遵循 Kodi Add-on 结构与发布规范。
+**2. 播放失败**
+- 检查歌曲是否已下架
+- 尝试降低音质
+- 检查 API 是否可用
 
-开发资源：参考 Kodi 开发文档与 Kodi Dev Kit 指南以确保对 Kodi 21 API 的兼容性与最佳实践。
+**3. 评论功能不工作**
+- 确保使用 netease 音乐源
+- 检查皮肤是否已修复
+- 查看 Kodi 日志获取详细信息
 
-脚本示例：可参考现有社区插件实现（如 script/addon 模式）以实现 UI 窗口与路由逻辑。
+### 调试信息
 
-架构概览
-组件：UI 层（XML 界面 + Python 控制器）；网络层（GD API 封装）；播放层（Kodi Player 控制）；缓存层（SQLite + 本地文件）。
+查看 Kodi 日志获取详细错误信息：
+- Windows: `%APPDATA%\Kodi\kodi.log`
+- Linux: `~/.kodi/temp/kodi.log`
+- macOS: `~/Library/Application Support/Kodi/logs/kodi.log`
 
-数据流：用户输入 → 调用 GD 搜索接口 → 列表展示 → 选择曲目 → 调用 URL 接口 → 播放；并在后台异步获取专辑图与歌词并缓存。
+## 📚 文档
 
-API 映射与错误处理
-映射：search → types=search；url → types=url；pic → types=pic；lyric → types=lyric。
+- [QUICK_START.md](QUICK_START.md) - 快速开始指南
+- [PLAYLIST_FEATURE.md](PLAYLIST_FEATURE.md) - 歌单功能说明
+- [XBSWIFT2_COMPATIBILITY.md](XBSWIFT2_COMPATIBILITY.md) - xbmcswift2 兼容性
+- [SKIN_FIX.md](SKIN_FIX.md) - 皮肤修复说明
+- [INTERACTIVE_PAGINATION.md](INTERACTIVE_PAGINATION.md) - 交互式分页功能
 
-速率控制：全局请求队列 + 令牌桶限流；遇 429 或 5xx 实施指数退避重试。
+## 🤝 贡献
 
-失败策略：播放回退到低码率；UI 显示友好错误并允许重试。
+欢迎提交问题和改进建议！
 
-测试与发布
-测试项：功能测试、并发限流测试、网络异常与离线缓存测试、Kodi 21 回归测试。
+## 📄 许可证
 
-发布：打包为 zip，按 Kodi 插件规范提交或提供私有仓库安装说明，并在 README 明确署名 GD音乐台(music.gdstudio.xyz)。
+GPL-3.0
+
+## 🙏 致谢
+
+- **GD 音乐台** - 提供 API 服务 [music.gdstudio.xyz](https://music.gdstudio.xyz)
+- **Kodi 社区** - 提供插件开发框架
+- **网易云音乐** - 提供音乐数据
+
+## 📢 免责声明
+
+本插件仅供个人学习和研究使用。请遵守相关法律法规和版权规定。
+
+**API 出处**: GD音乐台(music.gdstudio.xyz)
+
+## 📊 版本历史
+
+### v1.2.1 (2026-01-26)
+- 改进歌单分类选择为文件夹形式
+- 优化用户体验
+
+### v1.2.0 (2026-01-26)
+- 添加歌单功能
+- 支持高质量歌单浏览
+- 支持批量播放
+
+### v1.1.0 (2026-01-26)
+- 添加交互式分页功能
+- 改进评论浏览体验
+
+### v1.0.0 (2026-01-26)
+- 初始版本
+- 基础搜索和播放功能
+- xbmcswift2 兼容
+
+---
+
+**最后更新**: 2026-01-26
+**版本**: 1.2.1
+**Kodi 版本**: 21+
+**Python 版本**: 3+
