@@ -67,7 +67,7 @@ def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_nam
     """
     获取播放 URL，支持多音乐源优先级回退
 
-    优先级顺序：kuwo > joox > netease
+    优先级顺序：默认音乐源 > kuwo > joox > netease
 
     Args:
         track_id: 歌曲 ID
@@ -78,11 +78,18 @@ def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_nam
     Returns:
         tuple: (play_url, source) 或 (None, None) 如果所有源都失败
     """
-    # 定义音乐源优先级
-    source_priority = ['kuwo', 'joox', 'netease']
+    # 获取用户设置的默认音乐源
+    default_source = get_default_source()
+
+    # 定义后备音乐源优先级（排除默认音乐源，避免重复）
+    fallback_sources = ['kuwo', 'joox', 'netease']
+
+    # 构建完整的优先级列表：默认音乐源 + 后备音乐源
+    source_priority = [default_source] + [s for s in fallback_sources if s != default_source]
 
     log('Getting play URL with fallback: track_id=%s, quality=%s, song=%s, artist=%s' %
         (track_id, quality, song_name, artist_name))
+    log('Source priority: %s' % ' > '.join(source_priority))
 
     # 按优先级尝试每个音乐源
     for source in source_priority:
@@ -1070,13 +1077,37 @@ def play_music(source, track_id, pic_id='', lyric_id='', name='', artist='', alb
     default_quality = get_default_quality()
     log('Using quality: %s' % default_quality)
 
-    # Get play URL with priority fallback (kuwo > joox > netease)
+    # Get play URL with priority fallback (default_source > kuwo > joox > netease)
     play_url, actual_source = get_play_url_with_fallback(track_id, default_quality, name, artist)
 
     if not play_url:
+        # 获取默认音乐源名称
+        default_source = get_default_source()
+        source_names = {
+            'netease': '网易云音乐',
+            'kuwo': '酷我音乐',
+            'joox': 'JOOX',
+            'tencent': '腾讯音乐',
+            'tidal': 'Tidal',
+            'spotify': 'Spotify',
+            'ytmusic': 'YouTube Music',
+            'qobuz': 'Qobuz',
+            'deezer': 'Deezer',
+            'migu': '咪咕音乐',
+            'kugou': '酷狗音乐',
+            'ximalaya': '喜马拉雅',
+            'apple': 'Apple Music'
+        }
+
+        # 构建尝试的音乐源列表
+        tried_sources = ['默认音乐源 (%s)' % source_names.get(default_source, default_source)]
+        for fallback in ['kuwo', 'joox', 'netease']:
+            if fallback != default_source:
+                tried_sources.append('%s (%s)' % (source_names.get(fallback, fallback), fallback))
+
         xbmcgui.Dialog().ok(
-            __addon_name__,
-            '获取播放链接失败\n\n已尝试以下音乐源：\n1. 酷我音乐 (kuwo)\n2. JOOX\n3. 网易云音乐 (netease)\n\n可能原因：\n- 歌曲已下架\n- 需要VIP权限\n- 网络连接问题'
+            __addon__,
+            '获取播放链接失败\n\n已尝试以下音乐源：\n%s\n\n可能原因：\n- 歌曲已下架\n- 需要VIP权限\n- 网络连接问题' % '\n'.join(['  %d. %s' % (i+1, s) for i, s in enumerate(tried_sources)])
         )
         log('Failed to get play URL from all sources', xbmc.LOGERROR)
         return

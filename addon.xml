@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.audio.musicGD" name="GD 音乐台" version="1.0.6" provider-name="GD-Studio">
+<addon id="plugin.audio.musicGD" name="GD 音乐台" version="1.0.7" provider-name="GD-Studio">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
     <import addon="script.module.requests" version="2.0.0"/>
