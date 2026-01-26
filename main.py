@@ -23,6 +23,46 @@ __addon_name__ = __addon__.getAddonInfo('name')
 __icon__ = __addon__.getAddonInfo('icon')
 __fanart__ = __addon__.getAddonInfo('fanart')
 
+# Music source mapping (index -> source name)
+MUSIC_SOURCES = [
+    'netease',
+    'kuwo',
+    'joox',
+    'tencent',
+    'tidal',
+    'spotify',
+    'ytmusic',
+    'qobuz',
+    'deezer',
+    'migu',
+    'kugou',
+    'ximalaya',
+    'apple'
+]
+
+# Quality mapping (index -> quality value)
+QUALITIES = [
+    '128',
+    '192',
+    '320',
+    '740',
+    '999'
+]
+
+def get_default_source():
+    """Get default music source from settings"""
+    index = int(__addon__.getSetting('default_source') or '0')
+    if 0 <= index < len(MUSIC_SOURCES):
+        return MUSIC_SOURCES[index]
+    return 'netease'
+
+def get_default_quality():
+    """Get default quality from settings"""
+    index = int(__addon__.getSetting('default_quality') or '2')
+    if 0 <= index < len(QUALITIES):
+        return QUALITIES[index]
+    return '320'
+
 # GD Music API Base URL
 BASE_URL = 'https://music-api.gdstudio.xyz/api.php'
 CACHE_DIR = xbmcvfs.translatePath('special://profile/addon_data/%s/cache/' % __addon_id__)
@@ -517,7 +557,7 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
         return
 
     # 获取默认音质
-    default_quality = __addon__.getSetting('default_quality') or '320'
+    default_quality = get_default_quality()
     log('Using quality: %s' % default_quality)
 
     # 构建播放列表
@@ -855,8 +895,8 @@ def search_music():
         return
     
     log('Searching for: %s' % query)
-    
-    default_source = __addon__.getSetting('default_source') or 'netease'
+
+    default_source = get_default_source()
     log('Using music source: %s' % default_source)
     
     # Call API without double encoding
@@ -925,8 +965,8 @@ def play_music(source, track_id, pic_id='', lyric_id='', name='', artist='', alb
     log('Playing music: source=%s, track_id=%s' % (source, track_id))
     log('Song info: name=%s, artist=%s, album=%s' % (name, artist, album))
     log('Additional params: pic_id=%s, lyric_id=%s' % (pic_id, lyric_id))
-    
-    default_quality = __addon__.getSetting('default_quality') or '320'
+
+    default_quality = get_default_quality()
     log('Using quality: %s' % default_quality)
     
     # Get play URL

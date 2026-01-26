@@ -26,3 +26,77 @@ msgstr "Enable Caching"
 msgctxt "#30005"
 msgid "Cache Expiration (days)"
 msgstr "Cache Expiration (days)"
+
+# Music sources
+msgctxt "#301"
+msgid "netease"
+msgstr "NetEase Music"
+
+msgctxt "#302"
+msgid "kuwo"
+msgstr "Kuwo Music"
+
+msgctxt "#303"
+msgid "joox"
+msgstr "JOOX"
+
+msgctxt "#304"
+msgid "tencent"
+msgstr "Tencent Music"
+
+msgctxt "#305"
+msgid "tidal"
+msgstr "Tidal"
+
+msgctxt "#306"
+msgid "spotify"
+msgstr "Spotify"
+
+msgctxt "#307"
+msgid "ytmusic"
+msgstr "YouTube Music"
+
+msgctxt "#308"
+msgid "qobuz"
+msgstr "Qobuz"
+
+msgctxt "#309"
+msgid "deezer"
+msgstr "Deezer"
+
+msgctxt "#310"
+msgid "migu"
+msgstr "Migu Music"
+
+msgctxt "#311"
+msgid "kugou"
+msgstr "Kugou Music"
+
+msgctxt "#312"
+msgid "ximalaya"
+msgstr "Ximalaya"
+
+msgctxt "#313"
+msgid "apple"
+msgstr "Apple Music"
+
+# Quality options
+msgctxt "#321"
+msgid "128K"
+msgstr "128K"
+
+msgctxt "#322"
+msgid "192K"
+msgstr "192K"
+
+msgctxt "#323"
+msgid "320K"
+msgstr "320K"
+
+msgctxt "#324"
+msgid "Lossless"
+msgstr "Lossless"
+
+msgctxt "#325"
+msgid "Hi-Res"
+msgstr "Hi-Res"

@@ -1,29 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-    <category label="30001">
-        <setting label="30002" type="labelenum" id="default_source" default="netease">
-            <value>netease</value>
-            <value>kuwo</value>
-            <value>joox</value>
-            <value>tencent</value>
-            <value>tidal</value>
-            <value>spotify</value>
-            <value>ytmusic</value>
-            <value>qobuz</value>
-            <value>deezer</value>
-            <value>migu</value>
-            <value>kugou</value>
-            <value>ximalaya</value>
-            <value>apple</value>
-        </setting>
-        <setting label="30003" type="labelenum" id="default_quality" default="320">
-            <value>128</value>
-            <value>192</value>
-            <value>320</value>
-            <value>740</value>
-            <value>999</value>
-        </setting>
-        <setting label="30004" type="bool" id="cache_enabled" default="true"/>
-        <setting label="30005" type="number" id="cache_days" default="7"/>
+    <category label="常规">
+        <setting label="默认音乐源" type="select" id="default_source" default="0" lvalues="301|302|303|304|305|306|307|308|309|310|311|312|313"/>
+        <setting label="默认音质" type="select" id="default_quality" default="2" lvalues="321|322|323|324|325"/>
+        <setting label="启用缓存" type="bool" id="cache_enabled" default="true"/>
+        <setting label="缓存过期时间（天）" type="number" id="cache_days" default="7"/>
     </category>
 </settings>
