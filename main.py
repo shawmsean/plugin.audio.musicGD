@@ -113,8 +113,40 @@ def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_nam
 BASE_URL = 'https://music-api.gdstudio.xyz/api.php'
 CACHE_DIR = xbmcvfs.translatePath('special://profile/addon_data/%s/cache/' % __addon_id__)
 
-# 缓存配置
-CACHE_EXPIRE_SECONDS = 24 * 60 * 60  # 24小时
+
+def get_cache_expire_seconds():
+    """
+    从设置中获取缓存过期时间（秒）
+
+    Returns:
+        int: 缓存过期时间（秒）
+    """
+    # 获取设置中的缓存过期时间选项
+    cache_expire_option = __addon__.getSetting('cache_expire_time')
+
+    # 根据选项返回对应的秒数
+    # 选项值: "0"=1小时, "1"=6小时, "2"=12小时, "3"=24小时, "4"=3天, "5"=7天
+    expire_time_map = {
+        '0': 1 * 60 * 60,      # 1 小时
+        '1': 6 * 60 * 60,      # 6 小时
+        '2': 12 * 60 * 60,     # 12 小时
+        '3': 24 * 60 * 60,     # 24 小时
+        '4': 3 * 24 * 60 * 60, # 3 天
+        '5': 7 * 24 * 60 * 60  # 7 天
+    }
+
+    # 默认返回 24 小时
+    return expire_time_map.get(cache_expire_option, 24 * 60 * 60)
+
+
+def get_auto_clear_cache():
+    """
+    从设置中获取是否自动清理过期缓存
+
+    Returns:
+        bool: 是否自动清理过期缓存
+    """
+    return __addon__.getSetting('auto_clear_cache') == 'true'
 
 # Rate limiting: 50 requests per 5 minutes
 RATE_LIMIT = 50
