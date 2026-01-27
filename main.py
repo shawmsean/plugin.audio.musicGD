@@ -112,11 +112,16 @@ def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_nam
             log('Switching source, searching for song in %s: %s - %s' % (source, song_name, artist_name))
 
             # 在新源搜索歌曲
+            # 优先只用歌名搜索，如果失败再用"歌手+歌名"
             search_query = song_name
-            if artist_name:
-                search_query = f'{artist_name} {song_name}'
-
             search_data = api_call('search', source=source, name=search_query, count='1', pages='1')
+
+            # 如果只用歌名搜索没有结果，尝试用"歌手+歌名"
+            if not search_data or not isinstance(search_data, list) or len(search_data) == 0:
+                if artist_name:
+                    log('Search with song name only failed, trying with artist: %s %s' % (artist_name, song_name))
+                    search_query = f'{artist_name} {song_name}'
+                    search_data = api_call('search', source=source, name=search_query, count='1', pages='1')
 
             if not search_data or not isinstance(search_data, list) or len(search_data) == 0:
                 log('Search failed in %s or no results found' % source, xbmc.LOGWARNING)
@@ -655,18 +660,18 @@ def show_highquality_playlists(cat='全部', offset=0, limit=20):
             title += f' - {creator}'
 
         # 构建描述
-        plot = f'创建者: {creator}\n'
-        plot += f'歌曲数: {track_count}\n'
-        plot += f'播放量: {play_count}\n'
+        comment = f'创建者: {creator}\n'
+        comment += f'歌曲数: {track_count}\n'
+        comment += f'播放量: {play_count}\n'
         if description:
-            plot += f'\n{description[:200]}...'
+            comment += f'\n{description[:200]}...'
 
         # 构建信息
         info = {
             'title': name,
             'artist': creator,
             'album': f'{track_count} 首歌曲',
-            'plot': plot,
+            'comment': comment,
         }
 
         # 构建歌单 URL
@@ -1374,7 +1379,7 @@ def play_music(source, track_id, pic_id='', lyric_id='', name='', artist='', alb
                 tried_sources.append('%s (%s)' % (source_names.get(fallback, fallback), fallback))
 
         xbmcgui.Dialog().ok(
-            __addon__,
+            __addon_name__,
             '获取播放链接失败\n\n已尝试以下音乐源：\n%s\n\n可能原因：\n- 歌曲已下架\n- 需要VIP权限\n- 网络连接问题' % '\n'.join(['  %d. %s' % (i+1, s) for i, s in enumerate(tried_sources)])
         )
         log('Failed to get play URL from all sources', xbmc.LOGERROR)
@@ -1474,15 +1479,18 @@ def is_cache_expired(cache_file):
         file_mtime = os.path.getmtime(file_path)
         current_time = time.time()
 
+        # 从设置中获取缓存过期时间
+        cache_expire_seconds = get_cache_expire_seconds()
+
         # 检查是否过期
-        is_expired = (current_time - file_mtime) > CACHE_EXPIRE_SECONDS
+        is_expired = (current_time - file_mtime) > cache_expire_seconds
 
         if is_expired:
             log('Cache expired: %s (age: %d seconds)' % (cache_file, int(current_time - file_mtime)))
         else:
             age = int(current_time - file_mtime)
             log('Cache valid: %s (age: %d seconds, remaining: %d seconds)' %
-                (cache_file, age, CACHE_EXPIRE_SECONDS - age))
+                (cache_file, age, cache_expire_seconds - age))
 
         return is_expired
 
