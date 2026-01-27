@@ -63,17 +63,21 @@ def get_default_quality():
         return QUALITIES[index]
     return '320'
 
-def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_name=''):
+def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_name='', original_source='netease'):
     """
     获取播放 URL，支持多音乐源优先级回退
 
     优先级顺序：默认音乐源 > kuwo > joox > netease
 
+    重要：换源时，歌曲ID是源特定的，不能直接复用。
+    需要使用歌曲信息（歌名、歌手）在新源重新搜索，获取新源的歌曲ID。
+
     Args:
-        track_id: 歌曲 ID
+        track_id: 歌曲 ID（原源的ID）
         quality: 音质（默认 320）
-        song_name: 歌曲名称（用于日志）
-        artist_name: 歌手名称（用于日志）
+        song_name: 歌曲名称（用于换源时重新搜索）
+        artist_name: 歌手名称（用于换源时重新搜索）
+        original_source: 原始音乐源（用于判断是否需要重新搜索）
 
     Returns:
         tuple: (play_url, source) 或 (None, None) 如果所有源都失败
@@ -87,16 +91,52 @@ def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_nam
     # 构建完整的优先级列表：默认音乐源 + 后备音乐源
     source_priority = [default_source] + [s for s in fallback_sources if s != default_source]
 
-    log('Getting play URL with fallback: track_id=%s, quality=%s, song=%s, artist=%s' %
-        (track_id, quality, song_name, artist_name))
+    log('Getting play URL with fallback: track_id=%s, quality=%s, song=%s, artist=%s, original_source=%s' %
+        (track_id, quality, song_name, artist_name, original_source))
     log('Source priority: %s' % ' > '.join(source_priority))
 
     # 按优先级尝试每个音乐源
     for source in source_priority:
         log('Trying source: %s' % source)
 
-        # 尝试获取播放 URL
-        data = api_call('url', source=source, id=track_id, br=quality)
+        # 判断是否需要重新搜索
+        # 如果当前尝试的源与原始源不同，说明在换源，需要重新搜索
+        need_search = (source != original_source)
+
+        if need_search:
+            # 换源时，需要使用歌曲信息在新源重新搜索
+            if not song_name:
+                log('Cannot switch source: song_name is empty', xbmc.LOGWARNING)
+                continue
+
+            log('Switching source, searching for song in %s: %s - %s' % (source, song_name, artist_name))
+
+            # 在新源搜索歌曲
+            search_query = song_name
+            if artist_name:
+                search_query = f'{artist_name} {song_name}'
+
+            search_data = api_call('search', source=source, name=search_query, count='1', pages='1')
+
+            if not search_data or not isinstance(search_data, list) or len(search_data) == 0:
+                log('Search failed in %s or no results found' % source, xbmc.LOGWARNING)
+                continue
+
+            # 获取搜索结果中的第一首歌曲
+            new_track = search_data[0]
+            new_track_id = new_track.get('id', '')
+
+            if not new_track_id:
+                log('No valid track_id found in search results from %s' % source, xbmc.LOGWARNING)
+                continue
+
+            log('Found track in %s: id=%s, name=%s' % (source, new_track_id, new_track.get('name', '')))
+
+            # 使用新源的ID获取播放URL
+            data = api_call('url', source=source, id=new_track_id, br=quality)
+        else:
+            # 同源，直接使用原ID
+            data = api_call('url', source=source, id=track_id, br=quality)
 
         if data and 'url' in data and data['url']:
             play_url = data['url']
@@ -791,7 +831,8 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
         pic_id = album.get('picId', 0) or album.get('pic', 0)
 
         # 获取播放 URL（使用优先级机制：kuwo > joox > netease）
-        play_url, actual_source = get_play_url_with_fallback(track_id, default_quality, name, artist_names)
+        # 传入 original_source='netease'，因为歌单来自网易云
+        play_url, actual_source = get_play_url_with_fallback(track_id, default_quality, name, artist_names, 'netease')
 
         if not play_url:
             log('Failed to get play URL for track_id=%s from all sources' % track_id, xbmc.LOGWARNING)
@@ -1304,7 +1345,8 @@ def play_music(source, track_id, pic_id='', lyric_id='', name='', artist='', alb
     log('Using quality: %s' % default_quality)
 
     # Get play URL with priority fallback (default_source > kuwo > joox > netease)
-    play_url, actual_source = get_play_url_with_fallback(track_id, default_quality, name, artist)
+    # 传入 original_source，用于判断是否需要换源重新搜索
+    play_url, actual_source = get_play_url_with_fallback(track_id, default_quality, name, artist, source)
 
     if not play_url:
         # 获取默认音乐源名称
