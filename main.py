@@ -113,6 +113,9 @@ def get_play_url_with_fallback(track_id, quality='320', song_name='', artist_nam
 BASE_URL = 'https://music-api.gdstudio.xyz/api.php'
 CACHE_DIR = xbmcvfs.translatePath('special://profile/addon_data/%s/cache/' % __addon_id__)
 
+# 缓存配置
+CACHE_EXPIRE_SECONDS = 24 * 60 * 60  # 24小时
+
 # Rate limiting: 50 requests per 5 minutes
 RATE_LIMIT = 50
 RATE_WINDOW = 300  # 5 minutes in seconds
@@ -256,15 +259,29 @@ def get_url(**kwargs):
 
 # ==================== 歌单相关 API 函数 ====================
 
-def get_playlist_tags():
+def get_playlist_tags(use_cache=True):
     """
     获取歌单标签列表
+
+    Args:
+        use_cache: 是否使用缓存 (默认 True)
 
     Returns:
         dict: 标签数据，包含 tags 列表，或 None 如果失败
     """
     log('Getting playlist tags')
 
+    # 生成缓存键
+    cache_key = get_cache_key('playlist_tags')
+
+    # 尝试从缓存读取
+    if use_cache:
+        cached_data = get_cached_data(cache_key)
+        if cached_data is not None:
+            log('Using cached playlist tags')
+            return cached_data
+
+    # 从 API 获取数据
     try:
         url = 'https://apis.netstart.cn/music/playlist/highquality/tags'
 
@@ -279,6 +296,11 @@ def get_playlist_tags():
 
         if 'tags' in data:
             log('Playlist tags API success: %d tags' % len(data['tags']))
+
+            # 写入缓存
+            if use_cache:
+                set_cached_data(cache_key, data)
+
             return data
         else:
             log('Playlist tags API returned no tags', xbmc.LOGERROR)
@@ -292,7 +314,7 @@ def get_playlist_tags():
         return None
 
 
-def get_highquality_playlists(cat='全部', limit=20, offset=0):
+def get_highquality_playlists(cat='全部', limit=20, offset=0, use_cache=True):
     """
     获取高质量歌单列表
 
@@ -300,12 +322,24 @@ def get_highquality_playlists(cat='全部', limit=20, offset=0):
         cat: 歌单分类标签（如：'全部'、'华语'、'流行'等）
         limit: 每页数量
         offset: 偏移量
+        use_cache: 是否使用缓存 (默认 True)
 
     Returns:
         dict: 歌单数据，包含 playlists 列表，或 None 如果失败
     """
     log('Getting highquality playlists: cat=%s, limit=%d, offset=%d' % (cat, limit, offset))
 
+    # 生成缓存键 (包含分类、偏移量、每页数量)
+    cache_key = get_cache_key('highquality_playlists', cat, offset, limit)
+
+    # 尝试从缓存读取
+    if use_cache:
+        cached_data = get_cached_data(cache_key)
+        if cached_data is not None:
+            log('Using cached highquality playlists: cat=%s, offset=%d' % (cat, offset))
+            return cached_data
+
+    # 从 API 获取数据
     try:
         url = 'https://apis.netstart.cn/music/top/playlist/highquality'
         params = {
@@ -325,6 +359,11 @@ def get_highquality_playlists(cat='全部', limit=20, offset=0):
 
         if 'playlists' in data:
             log('Highquality playlists API success: %d playlists' % len(data['playlists']))
+
+            # 写入缓存
+            if use_cache:
+                set_cached_data(cache_key, data)
+
             return data
         else:
             log('Highquality playlists API returned no playlists', xbmc.LOGERROR)
@@ -338,18 +377,30 @@ def get_highquality_playlists(cat='全部', limit=20, offset=0):
         return None
 
 
-def get_playlist_detail(playlist_id):
+def get_playlist_detail(playlist_id, use_cache=True):
     """
     获取歌单详情
 
     Args:
         playlist_id: 歌单 ID
+        use_cache: 是否使用缓存 (默认 True)
 
     Returns:
         dict: 歌单详情数据，包含 playlist 信息和 tracks 列表，或 None 如果失败
     """
     log('Getting playlist detail: id=%s' % playlist_id)
 
+    # 生成缓存键
+    cache_key = get_cache_key('playlist_detail', playlist_id)
+
+    # 尝试从缓存读取
+    if use_cache:
+        cached_data = get_cached_data(cache_key)
+        if cached_data is not None:
+            log('Using cached playlist detail: id=%s' % playlist_id)
+            return cached_data
+
+    # 从 API 获取数据
     try:
         url = 'https://apis.netstart.cn/music/playlist/detail'
         params = {
@@ -369,6 +420,11 @@ def get_playlist_detail(playlist_id):
             playlist = data['playlist']
             track_count = len(playlist.get('tracks', []))
             log('Playlist detail API success: %s, %d tracks' % (playlist.get('name'), track_count))
+
+            # 写入缓存
+            if use_cache:
+                set_cached_data(cache_key, data)
+
             return data
         else:
             log('Playlist detail API returned no playlist', xbmc.LOGERROR)
@@ -382,7 +438,7 @@ def get_playlist_detail(playlist_id):
         return None
 
 
-def get_playlist_all_tracks(playlist_id, limit=None, offset=0):
+def get_playlist_all_tracks(playlist_id, limit=None, offset=0, use_cache=True):
     """
     获取歌单的所有歌曲
 
@@ -393,12 +449,24 @@ def get_playlist_all_tracks(playlist_id, limit=None, offset=0):
         playlist_id: 歌单 ID
         limit: 限制获取歌曲的数量，默认值为当前歌单的歌曲数量
         offset: 偏移量，默认值为 0
+        use_cache: 是否使用缓存 (默认 True)
 
     Returns:
         dict: 包含 songs 列表的数据，或 None 如果失败
     """
     log('Getting playlist all tracks: id=%s, limit=%s, offset=%d' % (playlist_id, limit, offset))
 
+    # 生成缓存键 (包含歌单ID、偏移量、限制数量)
+    cache_key = get_cache_key('playlist_all_tracks', playlist_id, offset, limit if limit is not None else 'all')
+
+    # 尝试从缓存读取
+    if use_cache:
+        cached_data = get_cached_data(cache_key)
+        if cached_data is not None:
+            log('Using cached playlist all tracks: id=%s' % playlist_id)
+            return cached_data
+
+    # 从 API 获取数据
     try:
         url = 'https://apis.netstart.cn/music/playlist/track/all'
         params = {
@@ -422,6 +490,11 @@ def get_playlist_all_tracks(playlist_id, limit=None, offset=0):
         if 'songs' in data:
             songs = data['songs']
             log('Playlist all tracks API success: %d songs' % len(songs))
+
+            # 写入缓存
+            if use_cache:
+                set_cached_data(cache_key, data)
+
             return data
         else:
             log('Playlist all tracks API returned no songs', xbmc.LOGERROR)
@@ -886,7 +959,15 @@ def extract_song_id_from_play_url():
 
 def main():
     """Main plugin entry point"""
-    
+
+    # 启动时自动清理过期缓存
+    try:
+        expired_count = clear_expired_cache()
+        if expired_count > 0:
+            log('Auto-cleared %d expired cache files on startup' % expired_count)
+    except Exception as e:
+        log('Error auto-clearing expired cache: %s' % str(e), xbmc.LOGERROR)
+
     # 首先尝试解析 xbmcswift2 风格的 URL 路径
     if len(sys.argv) > 0 and sys.argv[0]:
         # sys.argv[0] 格式: plugin://plugin.audio.musicGD/path
@@ -975,6 +1056,10 @@ def main():
         cat = args.get('cat', ['全部'])[0]
         offset = int(args.get('offset', ['0'])[0])
         play_playlist_all(playlist_id, cat=cat, offset=offset)
+    elif mode == 'cache_management':
+        show_cache_management()
+        xbmcplugin.endOfDirectory(int(sys.argv[1]))
+        return
     else:
         show_main_menu()
 
@@ -984,6 +1069,115 @@ def show_main_menu():
     """Display main menu"""
     add_directory_item('搜索音乐', get_url(mode='search'), icon=__icon__, fanart=__fanart__)
     add_directory_item('歌单精选', get_url(mode='playlist_tags'), icon=__icon__, fanart=__fanart__)
+    add_directory_item('缓存管理', get_url(mode='cache_management'), icon=__icon__, fanart=__fanart__)
+
+
+def show_cache_management():
+    """显示缓存管理界面"""
+    log('Showing cache management')
+
+    # 获取缓存统计信息
+    cache_info = get_cache_info()
+
+    # 构建缓存信息文本
+    info_text = "═══════════════════════════════════════\n"
+    info_text += "              缓存统计信息\n"
+    info_text += "═══════════════════════════════════════\n\n"
+
+    info_text += f"缓存状态: {'已启用' if __addon__.getSetting('cache_enabled') == 'true' else '已禁用'}\n"
+    info_text += f"缓存过期时间: 24 小时\n\n"
+
+    info_text += f"总缓存文件数: {cache_info['total_files']}\n"
+    info_text += f"有效缓存文件: {cache_info['valid_files']}\n"
+    info_text += f"过期缓存文件: {cache_info['expired_files']}\n"
+    info_text += f"缓存总大小: {cache_info['total_size_mb']} MB\n\n"
+
+    info_text += "═══════════════════════════════════════\n"
+
+    # 显示缓存信息
+    dialog = xbmcgui.Dialog()
+    dialog.textviewer('缓存管理', info_text)
+
+    # 构建操作选项
+    options = []
+
+    # 添加"清理过期缓存"选项
+    if cache_info['expired_files'] > 0:
+        options.append(f'🧹 清理过期缓存 ({cache_info["expired_files"]} 个文件)')
+
+    # 添加"清理所有缓存"选项
+    if cache_info['total_files'] > 0:
+        options.append(f'🗑️  清理所有缓存 ({cache_info["total_files"]} 个文件)')
+
+    # 添加"刷新缓存信息"选项
+    options.append('🔄 刷新缓存信息')
+
+    # 如果有选项,显示选择对话框
+    if options:
+        # 添加"退出"选项
+        options.append('❌ 退出')
+
+        selected = dialog.select('请选择操作', options)
+
+        if selected >= 0:
+            action = options[selected]
+
+            # 处理"清理过期缓存"
+            if '清理过期缓存' in action:
+                log('User selected: Clear expired cache')
+                deleted = clear_expired_cache()
+                dialog.notification('缓存管理', f'已清理 {deleted} 个过期缓存文件',
+                                   xbmcgui.NOTIFICATION_INFO, 3000, False)
+                # 重新显示缓存管理界面
+                show_cache_management()
+                return
+
+            # 处理"清理所有缓存"
+            elif '清理所有缓存' in action:
+                log('User selected: Clear all cache')
+
+                # 确认对话框
+                confirm = dialog.yesno(
+                    '确认清理',
+                    '确定要清理所有缓存吗?\n\n这将删除所有缓存的歌单、标签和歌曲数据。',
+                    yeslabel='确定',
+                    nolabel='取消'
+                )
+
+                if confirm:
+                    deleted = clear_all_cache()
+                    dialog.notification('缓存管理', f'已清理 {deleted} 个缓存文件',
+                                       xbmcgui.NOTIFICATION_INFO, 3000, False)
+                    # 重新显示缓存管理界面
+                    show_cache_management()
+                    return
+
+            # 处理"刷新缓存信息"
+            elif '刷新缓存信息' in action:
+                log('User selected: Refresh cache info')
+                show_cache_management()
+                return
+
+            # 处理"退出"
+            elif '退出' in action:
+                log('User selected: Exit from cache management')
+                return
+    else:
+        # 没有缓存文件时,只显示"刷新"和"退出"选项
+        options = ['🔄 刷新缓存信息', '❌ 退出']
+        selected = dialog.select('请选择操作', options)
+
+        if selected >= 0:
+            action = options[selected]
+
+            if '刷新缓存信息' in action:
+                log('User selected: Refresh cache info')
+                show_cache_management()
+                return
+            elif '退出' in action:
+                log('User selected: Exit from cache management')
+                return
+
 
 def search_music():
     """Handle music search"""
@@ -1163,6 +1357,264 @@ def ensure_cache_dir():
             log('Cache directory created: %s' % CACHE_DIR)
         except Exception as e:
             log('Failed to create cache directory: %s' % str(e), xbmc.LOGERROR)
+
+
+# ==================== 缓存管理系统 ====================
+
+def get_cache_key(prefix, *args):
+    """
+    生成缓存键
+
+    Args:
+        prefix: 缓存前缀 (如 'playlist_tags', 'playlists', 'playlist_detail')
+        *args: 缓存参数 (如分类、偏移量、ID等)
+
+    Returns:
+        str: MD5 缓存键
+    """
+    cache_string = '%s_%s' % (prefix, '_'.join(str(arg) for arg in args))
+    return hashlib.md5(cache_string.encode()).hexdigest()
+
+
+def is_cache_expired(cache_file):
+    """
+    检查缓存是否过期
+
+    Args:
+        cache_file: 缓存文件路径
+
+    Returns:
+        bool: True 表示已过期, False 表示未过期
+    """
+    try:
+        # 检查设置中是否启用缓存
+        if __addon__.getSetting('cache_enabled') != 'true':
+            return True
+
+        # 获取文件修改时间
+        import os
+        file_path = xbmcvfs.translatePath(cache_file)
+        if not os.path.exists(file_path):
+            return True
+
+        file_mtime = os.path.getmtime(file_path)
+        current_time = time.time()
+
+        # 检查是否过期
+        is_expired = (current_time - file_mtime) > CACHE_EXPIRE_SECONDS
+
+        if is_expired:
+            log('Cache expired: %s (age: %d seconds)' % (cache_file, int(current_time - file_mtime)))
+        else:
+            age = int(current_time - file_mtime)
+            log('Cache valid: %s (age: %d seconds, remaining: %d seconds)' %
+                (cache_file, age, CACHE_EXPIRE_SECONDS - age))
+
+        return is_expired
+
+    except Exception as e:
+        log('Error checking cache expiration: %s' % str(e), xbmc.LOGERROR)
+        return True
+
+
+def get_cached_data(cache_key):
+    """
+    从缓存读取数据
+
+    Args:
+        cache_key: 缓存键
+
+    Returns:
+        dict: 缓存数据, 或 None 如果缓存不存在或已过期
+    """
+    try:
+        cache_file = os.path.join(CACHE_DIR, '%s.json' % cache_key)
+
+        # 检查缓存是否存在
+        if not xbmcvfs.exists(cache_file):
+            log('Cache not found: %s' % cache_key)
+            return None
+
+        # 检查缓存是否过期
+        if is_cache_expired(cache_file):
+            # 删除过期缓存
+            xbmcvfs.delete(cache_file)
+            log('Deleted expired cache: %s' % cache_key)
+            return None
+
+        # 读取缓存数据
+        file_path = xbmcvfs.translatePath(cache_file)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        log('Cache hit: %s' % cache_key)
+        return data
+
+    except json.JSONDecodeError as e:
+        log('Cache JSON decode error: %s - %s' % (cache_key, str(e)), xbmc.LOGERROR)
+        # 删除损坏的缓存文件
+        try:
+            xbmcvfs.delete(os.path.join(CACHE_DIR, '%s.json' % cache_key))
+        except:
+            pass
+        return None
+    except Exception as e:
+        log('Error reading cache: %s - %s' % (cache_key, str(e)), xbmc.LOGERROR)
+        return None
+
+
+def set_cached_data(cache_key, data):
+    """
+    写入缓存数据
+
+    Args:
+        cache_key: 缓存键
+        data: 要缓存的数据 (必须是 JSON 可序列化的)
+
+    Returns:
+        bool: True 表示成功, False 表示失败
+    """
+    try:
+        ensure_cache_dir()
+
+        cache_file = os.path.join(CACHE_DIR, '%s.json' % cache_key)
+        file_path = xbmcvfs.translatePath(cache_file)
+
+        # 写入缓存数据
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        log('Cache written: %s' % cache_key)
+        return True
+
+    except Exception as e:
+        log('Error writing cache: %s - %s' % (cache_key, str(e)), xbmc.LOGERROR)
+        return False
+
+
+def clear_all_cache():
+    """
+    清理所有缓存
+
+    Returns:
+        int: 删除的缓存文件数量
+    """
+    try:
+        ensure_cache_dir()
+
+        cache_path = xbmcvfs.translatePath(CACHE_DIR)
+        deleted_count = 0
+
+        # 遍历缓存目录
+        if xbmcvfs.exists(CACHE_DIR):
+            dirs, files = xbmcvfs.listdir(cache_path)
+
+            for file in files:
+                file_path = os.path.join(cache_path, file)
+                try:
+                    xbmcvfs.delete(file_path)
+                    deleted_count += 1
+                    log('Deleted cache file: %s' % file)
+                except Exception as e:
+                    log('Failed to delete cache file %s: %s' % (file, str(e)), xbmc.LOGERROR)
+
+        log('Cache cleared: %d files deleted' % deleted_count)
+        return deleted_count
+
+    except Exception as e:
+        log('Error clearing cache: %s' % str(e), xbmc.LOGERROR)
+        return 0
+
+
+def clear_expired_cache():
+    """
+    清理过期缓存
+
+    Returns:
+        int: 删除的过期缓存文件数量
+    """
+    try:
+        ensure_cache_dir()
+
+        cache_path = xbmcvfs.translatePath(CACHE_DIR)
+        deleted_count = 0
+
+        # 遍历缓存目录
+        if xbmcvfs.exists(CACHE_DIR):
+            dirs, files = xbmcvfs.listdir(cache_path)
+
+            for file in files:
+                file_path = os.path.join(cache_path, file)
+                try:
+                    # 检查是否过期
+                    if is_cache_expired(file_path):
+                        xbmcvfs.delete(file_path)
+                        deleted_count += 1
+                        log('Deleted expired cache: %s' % file)
+                except Exception as e:
+                    log('Failed to check/delete cache file %s: %s' % (file, str(e)), xbmc.LOGERROR)
+
+        log('Expired cache cleared: %d files deleted' % deleted_count)
+        return deleted_count
+
+    except Exception as e:
+        log('Error clearing expired cache: %s' % str(e), xbmc.LOGERROR)
+        return 0
+
+
+def get_cache_info():
+    """
+    获取缓存统计信息
+
+    Returns:
+        dict: 包含缓存统计信息的字典
+    """
+    try:
+        ensure_cache_dir()
+
+        cache_path = xbmcvfs.translatePath(CACHE_DIR)
+        total_files = 0
+        expired_files = 0
+        total_size = 0
+
+        if xbmcvfs.exists(CACHE_DIR):
+            dirs, files = xbmcvfs.listdir(cache_path)
+
+            for file in files:
+                file_path = os.path.join(cache_path, file)
+                try:
+                    total_files += 1
+
+                    # 检查文件大小
+                    stat = xbmcvfs.Stat(file_path)
+                    total_size += stat.st_size()
+
+                    # 检查是否过期
+                    if is_cache_expired(file_path):
+                        expired_files += 1
+                except Exception as e:
+                    log('Error checking cache file %s: %s' % (file, str(e)), xbmc.LOGERROR)
+
+        return {
+            'total_files': total_files,
+            'expired_files': expired_files,
+            'valid_files': total_files - expired_files,
+            'total_size': total_size,
+            'total_size_mb': round(total_size / (1024 * 1024), 2)
+        }
+
+    except Exception as e:
+        log('Error getting cache info: %s' % str(e), xbmc.LOGERROR)
+        return {
+            'total_files': 0,
+            'expired_files': 0,
+            'valid_files': 0,
+            'total_size': 0,
+            'total_size_mb': 0
+        }
+
+
+# ==================== 原有缓存函数 (保持兼容) ====================
 
 def get_cache_path(filename):
     """Get full cache file path"""
