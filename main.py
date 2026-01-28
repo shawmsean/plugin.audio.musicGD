@@ -669,8 +669,6 @@ def show_highquality_playlists(cat='全部', offset=0, limit=20):
         # 构建信息
         info = {
             'title': name,
-            'artist': creator,
-            'album': f'{track_count} 首歌曲',
             'plot': plot,
         }
 
