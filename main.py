@@ -660,25 +660,25 @@ def show_highquality_playlists(cat='全部', offset=0, limit=20):
             title += f' - {creator}'
 
         # 构建描述
-        comment = f'创建者: {creator}\n'
-        comment += f'歌曲数: {track_count}\n'
-        comment += f'播放量: {play_count}\n'
+        plot = f'创建者: {creator}\n'
+        plot += f'歌曲数: {track_count}\n'
+        plot += f'播放量: {play_count}\n'
         if description:
-            comment += f'\n{description[:200]}...'
+            plot += f'\n{description[:200]}...'
 
         # 构建信息
         info = {
             'title': name,
             'artist': creator,
             'album': f'{track_count} 首歌曲',
-            'comment': comment,
+            'plot': plot,
         }
 
         # 构建歌单 URL
         url = get_url(mode='playlist_detail', id=playlist_id, cat=cat, offset=offset)
 
         # 添加到列表
-        add_directory_item(title, url, is_folder=True, icon=cover_url, fanart=cover_url, info=info)
+        add_directory_item(title, url, is_folder=True, icon=cover_url, fanart=cover_url, info=info, info_type='video')
 
     # 添加分页按钮
     if len(playlists) == limit:
@@ -876,26 +876,39 @@ def play_playlist_all(playlist_id, cat='全部', offset=0):
     else:
         log('No tracks to play', xbmc.LOGWARNING)
 
-def add_directory_item(name, url, is_folder=True, icon=None, fanart=None, info=None):
-    """Add directory item to Kodi listing"""
+def add_directory_item(name, url, is_folder=True, icon=None, fanart=None, info=None, info_type='music'):
+    """
+    Add directory item to Kodi listing
+
+    Args:
+        name: Item name
+        url: Item URL
+        is_folder: Whether this is a folder (default True)
+        icon: Icon image URL
+        fanart: Fanart image URL
+        info: Metadata dictionary
+        info_type: Info type - 'music' or 'video' (default 'music')
+                  - 'music': supports title, artist, album, genre, year, comment, etc.
+                  - 'video': supports title, plot, genre, year, rating, etc.
+    """
     li = xbmcgui.ListItem(name)
-    
+
     # Set icon
     if icon:
         li.setArt({'icon': icon, 'thumb': icon})
-    
+
     # Set fanart (background image)
     if fanart:
         li.setArt({'fanart': fanart})
-    
-    # Set music metadata using setInfo (compatible with all Kodi versions)
+
+    # Set metadata using setInfo with specified info_type
     if info:
-        li.setInfo('music', info)
-    
+        li.setInfo(info_type, info)
+
     # Mark as playable if not a folder
     if not is_folder:
         li.setProperty('IsPlayable', 'true')
-    
+
     xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=li, isFolder=is_folder)
 
 def validate_query(query):
